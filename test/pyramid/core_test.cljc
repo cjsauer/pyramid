@@ -35,25 +35,25 @@
            (p/db [{:person/id 0
                    :some-data {1 "hello"
                                3 "world"}}]))
-    "Map with numbers as keys")
+        "Map with numbers as keys")
   (t/is (= {:person/id
             {123
-             {:person/id 123,
-              :person/name "Will",
-              :contact {:phone "000-000-0001"},
-              :best-friend [:person/id 456],
+             {:person/id 123
+              :person/name "Will"
+              :contact {:phone "000-000-0001"}
+              :best-friend [:person/id 456]
               :friends
               [[:person/id 9001]
                [:person/id 456]
                [:person/id 789]
-               [:person/id 1000]]},
+               [:person/id 1000]]}
              456
-             {:person/id 456,
-              :person/name "Jose",
-              :account/email "asdf@jkl",
-              :best-friend [:person/id 123]},
-             9001 #:person{:id 9001, :name "Georgia"},
-             789 #:person{:id 789, :name "Frank"},
+             {:person/id 456
+              :person/name "Jose"
+              :account/email "asdf@jkl"
+              :best-friend [:person/id 123]}
+             9001 #:person{:id 9001, :name "Georgia"}
+             789 #:person{:id 789, :name "Frank"}
              1000 #:person{:id 1000, :name "Robert"}}}
            (p/db [{:person/id 123
                    :person/name "Will"
@@ -107,10 +107,10 @@
                        (when (and (some? type) (some? id))
                          [(keyword type "id") id]))))]
       (t/is (= {:person/id
-                {"1234" {:type "person", :id "1234", :purchases [[:item/id "1234"]]}},
+                {"1234" {:type "person", :id "1234", :purchases [[:item/id "1234"]]}}
                 :item/id
-                {"1234" {:type "item", :id "1234"}, "5678" {:type "item", :id "5678"}},
-                :type "foo",
+                {"1234" {:type "item", :id "1234"}, "5678" {:type "item", :id "5678"}}
+                :type "foo"
                 :id "bar"}
                db)
             "correctly identifies entities")
@@ -152,11 +152,11 @@
                                1 {:person/id 1}}}
               :entities #{{:person/id 0 :person/name "Gill"}
                           {:person/id 1}}}
-           (p/add-report
-            {}
-            {:person/id 0}
-            {:person/id 1}
-            {:person/id 0 :person/name "Gill"}))))
+             (p/add-report
+              {}
+              {:person/id 0}
+              {:person/id 1}
+              {:person/id 0 :person/name "Gill"}))))
 
 
 (def data
@@ -290,6 +290,34 @@
                                  :photo/height 10
                                  :chat.entry/timestamp "7890"}]}
                (p/pull db1 query)))))
+
+  (t/testing "recursive union"
+    (let [data {:expr/id       0
+                :expr/operator :add
+                :expr/operands [{:expr/id       1
+                                 :expr/operator :mult
+                                 :expr/operands [{:term/id    0
+                                                  :term/value 42}
+                                                 {:term/id    1
+                                                  :term/value 100}]}
+                                {:expr/id       2
+                                 :expr/operator :sub
+                                 :expr/operands [{:term/id    3
+                                                  :term/value -10}
+                                                 {:term/id    4
+                                                  :term/value 17}]}]}
+          db1 (p/db [data])
+          query [{[:expr/id 0] {:expr/id [:expr/operator
+                                          {:expr/operands '...}]
+                                :term/id [:term/value]}}]]
+      (t/is (= {:expr/operator :add
+                :expr/operands [{:expr/operator :mult
+                                 :expr/operands [{:term/value 42}
+                                                 {:term/value 100}]}
+                                {:expr/operator :sub
+                                 :expr/operands [{:term/value -10}
+                                                 {:term/value 17}]}]}
+               (get (p/pull db1 query) [:expr/id 0])))))
 
 
   (t/testing "not found"
